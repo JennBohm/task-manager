@@ -1,121 +1,90 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
+import { useEffect, useMemo, useState } from 'react'
+import TodoFilters from './components/TodoFilters.jsx'
+import TodoForm from './components/TodoForm.jsx'
+import TodoList from './components/TodoList.jsx'
 import './App.css'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [todos, setTodos] = useState(() => {
+    const saved = window.localStorage.getItem('task-manager-todos')
+    return saved ? JSON.parse(saved) : []
+  })
+  const [newTodo, setNewTodo] = useState('')
+  const [filter, setFilter] = useState('all')
+
+  useEffect(() => {
+    window.localStorage.setItem('task-manager-todos', JSON.stringify(todos))
+  }, [todos])
+
+  const handleAddTodo = (event) => {
+    event.preventDefault()
+    const trimmed = newTodo.trim()
+    if (!trimmed) return
+
+    setTodos((currentTodos) => [
+      ...currentTodos,
+      {
+        id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        text: trimmed,
+        completed: false,
+      },
+    ])
+    setNewTodo('')
+  }
+
+  const toggleTodo = (id) => {
+    setTodos((currentTodos) =>
+      currentTodos.map((todo) =>
+        todo.id === id ? { ...todo, completed: !todo.completed } : todo,
+      ),
+    )
+  }
+
+  const deleteTodo = (id) => {
+    setTodos((currentTodos) => currentTodos.filter((todo) => todo.id !== id))
+  }
+
+  const clearCompleted = () => {
+    setTodos((currentTodos) => currentTodos.filter((todo) => !todo.completed))
+  }
+
+  const activeCount = todos.filter((todo) => !todo.completed).length
+  const completedCount = todos.length - activeCount
+
+  const filteredTodos = useMemo(() => {
+    if (filter === 'active') return todos.filter((todo) => !todo.completed)
+    if (filter === 'completed') return todos.filter((todo) => todo.completed)
+    return todos
+  }, [filter, todos])
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+    <div className="app-shell">
+      <header className="app-header">
+        <h1>Todo List</h1>
+        <p>Keep track of your tasks with React Hooks.</p>
+      </header>
+
+      <TodoForm newTodo={newTodo} setNewTodo={setNewTodo} onAddTodo={handleAddTodo} />
+
+      <section className="todo-panel">
+        <div className="todo-meta">
+          <span>{activeCount} active</span>
+          <span>{completedCount} completed</span>
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
+
+        <TodoFilters filter={filter} setFilter={setFilter} />
+
+        <TodoList todos={filteredTodos} onToggle={toggleTodo} onDelete={deleteTodo} />
       </section>
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+      {completedCount > 0 && (
+        <div className="todo-footer">
+          <button type="button" className="clear-button" onClick={clearCompleted}>
+            Clear completed
+          </button>
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+      )}
+    </div>
   )
 }
 
